@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaR Calculator - Precision Fix</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.0"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 20px; background-color: #f8fafc; color: #1e293b; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 6px; font-weight: 600; font-size: 0.8rem; color: #64748b; }
+        input { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; }
+        button { grid-column: 1 / -1; padding: 14px; background-color: #0f172a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .card { padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; }
+        .v95 { border-top: 4px solid #3b82f6; background-color: #eff6ff; }
+        .v99 { border-top: 4px solid #ef4444; background-color: #fef2f2; }
+        .vCustom { border-top: 4px solid #10b981; background-color: #ecfdf5; }
+        .val { font-size: 1.15rem; font-weight: 800; display: block; margin-top: 5px; }
+        canvas { margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Value at Risk (VaR) Visualizer</h2>
+    <div class="grid">
+        <div class="input-group"><label>Portfolio Amount ($)</label><input type="number" id="amount" value="1000000"></div>
+        <div class="input-group"><label>Volatility (σ %)</label><input type="number" id="volatility" value="2.0" step="0.1"></div>
+        <div class="input-group"><label>Horizon (Periods)</label><input type="number" id="horizon" value="1"></div>
+        <div class="input-group"><label>Custom Confidence %</label><input type="number" id="customConf" value="97.5" step="0.1"></div>
+        <button onclick="calculateVaR()">Generate Risk Model</button>
+    </div>
+    
+    <div class="results">
+        <div class="card v95"><span>95% VaR</span><span class="val" id="res95">-</span></div>
+        <div class="card v99"><span>99% VaR</span><span class="val" id="res99">-</span></div>
+        <div class="card vCustom"><span><span id="customTitle">97.5</span>% VaR (Custom)</span><span class="val" id="resCustom">-</span></div>
+    </div>
+    
+    <canvas id="varChart" height="130"></canvas>
+</div>
+
+<script>
+let myChart;
+
+// High-precision Inverse Normal Cumulative Distribution Function (One-tailed)
+function invNormal(p) {
+    if (p < 0.5) return -invNormal(1 - p);
+    let t = Math.sqrt(-2.0 * Math.log(1.0 - p));
+    return t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1.0 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t);
+}
+
+function normalPDF(x, sigma) {
+    return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow(x / sigma, 2));
+}
+
+function calculateVaR() {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const vol = parseFloat(document.getElementById('volatility').value) / 100;
+    const t = parseFloat(document.getElementById('horizon').value);
+    const customP = parseFloat(document.getElementById('customConf').value) / 100;
+    
+    const adjVol = vol * Math.sqrt(t);
+    const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+    // Standard Z-scores
+    const z95 = 1.64485;
+    const z99 = 2.32635;
+    const zCustom = invNormal(customP);
+
+    const v95 = amount * z95 * adjVol;
+    const v99 = amount * z99 * adjVol;
+    const vCust = amount * zCustom * adjVol;
+
+    document.getElementById('res95').innerText = `${fmt(v95)} (${(z95 * adjVol * 100).toFixed(2)}%)`;
+    document.getElementById('res99').innerText = `${fmt(v99)} (${(z99 * adjVol * 100).toFixed(2)}%)`;
+    document.getElementById('customTitle').innerText = (customP * 100).toFixed(1);
+    document.getElementById('resCustom').innerText = `${fmt(vCust)} (${(zCustom * adjVol * 100).toFixed(2)}%)`;
+
+    updateChart(adjVol, -z95*adjVol, -z99*adjVol, -zCustom*adjVol, fmt(v95), fmt(v99), fmt(vCust), (customP*100).toFixed(1));
+}
+
+function updateChart(sigma, p95, p99, pCust, lbl95, lbl99, lblCust, confCust) {
+    const labels = [], points = [];
+    const spread = Math.max(Math.abs(pCust), 4 * sigma);
+    for (let i = -spread - sigma; i <= spread + sigma; i += (2 * spread + 2 * sigma) / 100) {
+        labels.push(i); points.push(normalPDF(i, sigma));
+    }
+
+    if (myChart) myChart.destroy();
+    const ctx = document.getElementById('varChart').getContext('2d');
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: [{ data: points, borderColor: '#94a3b8', fill: true, backgroundColor: 'rgba(241, 245, 249, 0.5)', pointRadius: 0, tension: 0.4 }] },
+        options: {
+            layout: { padding: { top: 70, left: 20, right: 20 } },
+            clip: false,
+            scales: { 
+                x: { type: 'linear', ticks: { callback: v => (v * 100).toFixed(1) + '%' } }, 
+                y: { display: false, suggestMax: Math.max(...points) * 1.3 } 
+            },
+            plugins: {
+                legend: { display: false },
+                annotation: {
+                    clip: false,
+                    annotations: {
+                        l95: { type: 'line', xMin: p95, xMax: p95, borderColor: '#3b82f6', borderDash: [4,4], label: { display: true, content: '95% VaR: '+lbl95, position: 'center', backgroundColor: '#3b82f6' } },
+                        l99: { type: 'line', xMin: p99, xMax: p99, borderColor: '#ef4444', borderDash: [4,4], label: { display: true, content: '99% VaR: '+lbl99, position: 'start', yAdjust: -30, backgroundColor: '#ef4444' } },
+                        lCust: { type: 'line', xMin: pCust, xMax: pCust, borderColor: '#10b981', borderDash: [4,4], label: { display: true, content: confCust+'% VaR: '+lblCust, position: 'end', yAdjust: 30, backgroundColor: '#10b981' } }
+                    }
+                }
+            }
+        }
+    });
+}
+calculateVaR();
+</script>
+</body>
+</html>

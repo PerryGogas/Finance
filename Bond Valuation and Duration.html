@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Bond Calculator</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1a73e8; margin-bottom: 5px; }
+        p.subtitle { text-align: center; font-size: 0.9em; color: #666; margin-bottom: 25px; }
+        .input-group { display: flex; align-items: center; margin-bottom: 15px; gap: 10px; }
+        label { flex: 1; font-weight: 600; font-size: 0.9em; }
+        input, select { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+        button.solve-btn { padding: 10px 15px; background: #34a853; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8em; font-weight: bold; min-width: 90px; }
+        button.solve-btn:hover { background: #2d8e47; }
+        .type-selector { margin-bottom: 20px; padding: 15px; background: #e8f0fe; border-radius: 8px; }
+        .hidden { display: none !important; }
+        .footer-note { font-size: 0.8em; color: #888; margin-top: 20px; border-top: 1px solid #eee; pt: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Bond Pricing Engine</h2>
+	<h2>Professor Periklis Gogas</h2>
+    <p class="subtitle">Fill all fields except one, then click "Solve" for the empty field.</p>
+
+    <div class="type-selector">
+        <label>Bond Type:</label>
+        <select id="bondType" onchange="toggleFields()">
+            <option value="coupon">Coupon Bond</option>
+            <option value="discount">Zero-Coupon (Discount) Bond</option>
+            <option value="perpetual">Perpetual Bond (Console)</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>Market Price ($)</label>
+        <input type="number" id="price" step="0.01" placeholder="e.g. 950">
+        <button class="solve-btn" onclick="solveFor('price')">Solve P</button>
+    </div>
+
+    <div class="input-group" id="faceValueGroup">
+        <label>Face Value ($)</label>
+        <input type="number" id="faceValue" value="1000">
+        <button class="solve-btn" onclick="solveFor('faceValue')">Solve F</button>
+    </div>
+
+    <div class="input-group">
+        <label>Annual Yield (YTM %)</label>
+        <input type="number" id="yield" step="0.001" placeholder="e.g. 5">
+        <button class="solve-btn" onclick="solveFor('yield')">Solve YTM</button>
+    </div>
+
+    <div class="input-group" id="couponGroup">
+        <label>Annual Coupon Rate (%)</label>
+        <input type="number" id="couponRate" step="0.1" placeholder="e.g. 4">
+        <button class="solve-btn" onclick="solveFor('couponRate')">Solve C</button>
+    </div>
+
+    <div class="input-group" id="yearsGroup">
+        <label>Years to Maturity</label>
+        <input type="number" id="years" step="0.1" placeholder="e.g. 10">
+        <button class="solve-btn" onclick="solveFor('years')">Solve N</button>
+    </div>
+
+    <p class="footer-note">Note: Calculations assume annual compounding for simplicity.</p>
+</div>
+
+<script>
+    function toggleFields() {
+        const type = document.getElementById('bondType').value;
+        const couponGroup = document.getElementById('couponGroup');
+        const yearsGroup = document.getElementById('yearsGroup');
+        const faceValueGroup = document.getElementById('faceValueGroup');
+
+        // Reset visibility
+        couponGroup.classList.remove('hidden');
+        yearsGroup.classList.remove('hidden');
+        faceValueGroup.classList.remove('hidden');
+
+        if (type === 'discount') {
+            couponGroup.classList.add('hidden');
+        } else if (type === 'perpetual') {
+            yearsGroup.classList.add('hidden');
+            faceValueGroup.classList.add('hidden');
+        }
+    }
+
+    function getValue(id) { return parseFloat(document.getElementById(id).value); }
+    function setValue(id, val) { document.getElementById(id).value = val.toFixed(2); }
+
+    function solveFor(target) {
+        const type = document.getElementById('bondType').value;
+        const P = getValue('price');
+        const F = getValue('faceValue');
+        const r = getValue('yield') / 100;
+        const cr = getValue('couponRate') / 100;
+        const n = getValue('years');
+        const C = F * cr;
+
+        try {
+            if (type === 'coupon') {
+                if (target === 'price') {
+                    const price = C * ((1 - Math.pow(1 + r, -n)) / r) + F / Math.pow(1 + r, n);
+                    setValue('price', price);
+                } else if (target === 'couponRate') {
+                    const couponReq = (P - F / Math.pow(1 + r, n)) / ((1 - Math.pow(1 + r, -n)) / r);
+                    setValue('couponRate', (couponReq / F) * 100);
+                } else if (target === 'faceValue') {
+                    const faceValue = P / (cr * ((1 - Math.pow(1 + r, -n)) / r) + 1 / Math.pow(1 + r, n));
+                    setValue('faceValue', faceValue);
+                } else if (target === 'years') {
+                    // Algebraic solve for n: P = C/r * (1 - (1+r)^-n) + F(1+r)^-n
+                    const nVal = Math.log((C - F * r) / (C - P * r)) / Math.log(1 + r);
+                    setValue('years', nVal);
+                } else if (target === 'yield') {
+                    // Numerical Newton's Method to find YTM
+                    let ytm = 0.05; // initial guess
+                    for (let i = 0; i < 20; i++) {
+                        let priceAtGuess = C * ((1 - Math.pow(1 + ytm, -n)) / ytm) + F / Math.pow(1 + ytm, n);
+                        let derivative = (C / Math.pow(ytm, 2)) * (Math.pow(1 + ytm, -n) - 1) + (n * (C - F * ytm) * Math.pow(1 + ytm, -n - 1)) / ytm;
+                        ytm = ytm - (priceAtGuess - P) / derivative;
+                    }
+                    setValue('yield', ytm * 100);
+                }
+            } 
+            
+            else if (type === 'discount') {
+                if (target === 'price') setValue('price', F / Math.pow(1 + r, n));
+                if (target === 'yield') setValue('yield', (Math.pow(F / P, 1 / n) - 1) * 100);
+                if (target === 'faceValue') setValue('faceValue', P * Math.pow(1 + r, n));
+                if (target === 'years') setValue('years', Math.log(F / P) / Math.log(1 + r));
+            } 
+            
+            else if (type === 'perpetual') {
+                // Formula: P = C / r (Note: Face value doesn't technically matter, but we use it to get C)
+                if (target === 'price') setValue('price', C / r);
+                if (target === 'yield') setValue('yield', (C / P) * 100);
+                if (target === 'couponRate') setValue('couponRate', (P * r / F) * 100);
+            }
+        } catch (e) {
+            alert("Calculation error. Please ensure all other fields are filled correctly.");
+        }
+    }
+</script>
+
+</body>
+</html>

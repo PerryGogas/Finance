@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bankruptcy Analyzer: Ohlson & Altman</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f9; padding: 20px; color: #333; }
+        .card { max-width: 850px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #1a73e8; margin-bottom: 20px; padding-bottom: 10px; }
+        .industry-nav { background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .input-field { display: flex; flex-direction: column; }
+        label { font-size: 0.8rem; font-weight: bold; margin-bottom: 4px; color: #555; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .calc-btn { width: 100%; padding: 16px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .results-box { margin-top: 30px; display: none; }
+        .score-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .score-card { padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #ddd; }
+        .val { font-size: 2.2rem; font-weight: bold; display: block; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 20px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+        .danger { background: #fce8e6; color: #d93025; border-color: #f5c2c7; }
+        .safe { background: #e6f4ea; color: #188038; border-color: #badbcc; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header"><h2>Bankruptcy Risk Analyzer</h2></div>
+
+    <div class="industry-nav">
+        <label>Select Sector Threshold</label>
+        <select id="sector_type">
+            <option value="0.5">Commercial (50% Prob. Threshold)</option>
+            <option value="0.7">Banking (70% Prob. Threshold)</option>
+        </select>
+    </div>
+
+    <div class="input-grid">
+        <div class="input-field"><label>Total Assets</label><input type="number" id="ta" value="1000000"></div>
+        <div class="input-field"><label>Total Liabilities</label><input type="number" id="tl" value="850000"></div>
+        <div class="input-field"><label>Working Capital</label><input type="number" id="wc" value="50000"></div>
+        <div class="input-field"><label>Retained Earnings</label><input type="number" id="re" value="120000"></div>
+        <div class="input-field"><label>EBIT</label><input type="number" id="ebit" value="45000"></div>
+        <div class="input-field"><label>Market Val Equity</label><input type="number" id="mve" value="1100000"></div>
+        <div class="input-field"><label>Total Revenue</label><input type="number" id="rev" value="1400000"></div>
+        <div class="input-field"><label>Current Assets</label><input type="number" id="ca" value="250000"></div>
+        <div class="input-field"><label>Current Liabilities</label><input type="number" id="cl" value="200000"></div>
+        <div class="input-field"><label>Net Income (T)</label><input type="number" id="ni" value="20000"></div>
+        <div class="input-field"><label>Net Income (T-1)</label><input type="number" id="ni_p" value="-5000"></div>
+        <div class="input-field"><label>Funds from Ops</label><input type="number" id="ffo" value="40000"></div>
+    </div>
+
+    <button class="calc-btn" onclick="runAll()">CALCULATE ALL SCORES</button>
+
+    <div class="results-box" id="results">
+        <div class="score-row">
+            <div id="o_card" class="score-card">
+                <strong>Ohlson O-Score Prob.</strong>
+                <span id="o_val" class="val">0%</span>
+                <b id="o_status">--</b>
+            </div>
+            <div id="z_card" class="score-card">
+                <strong>Altman Z-Score</strong>
+                <span id="z_val" class="val">0.00</span>
+                <b id="z_status">--</b>
+            </div>
+        </div>
+
+        <h3>Variable Breakdown</h3>
+        <table>
+            <thead><tr><th>ID</th><th>Variable Name</th><th>Value</th></tr></thead>
+            <tbody id="v_table"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function runAll() {
+    // 1. Capture Data
+    const ta = parseFloat(document.getElementById('ta').value) || 1;
+    const tl = parseFloat(document.getElementById('tl').value) || 0;
+    const wc = parseFloat(document.getElementById('wc').value) || 0;
+    const re = parseFloat(document.getElementById('re').value) || 0;
+    const ebit = parseFloat(document.getElementById('ebit').value) || 0;
+    const mve = parseFloat(document.getElementById('mve').value) || 0;
+    const rev = parseFloat(document.getElementById('rev').value) || 0;
+    const ca = parseFloat(document.getElementById('ca').value) || 1;
+    const cl = parseFloat(document.getElementById('cl').value) || 0;
+    const ni = parseFloat(document.getElementById('ni').value) || 0;
+    const ni_p = parseFloat(document.getElementById('ni_p').value) || 0;
+    const ffo = parseFloat(document.getElementById('ffo').value) || 0;
+    const threshold = parseFloat(document.getElementById('sector_type').value);
+
+    // 2. Ohlson Logic
+    const x = {
+        X1: Math.log(ta / 100),
+        X2: tl / ta,
+        X3: wc / ta,
+        X4: cl / ca,
+        X5: tl > ta ? 1 : 0,
+        X6: ni / ta,
+        X7: ffo / tl,
+        X8: (ni < 0 && ni_p < 0) ? 1 : 0,
+        X9: (ni - ni_p) / (Math.abs(ni) + Math.abs(ni_p) + 0.001)
+    };
+
+    const T = -1.32 - 0.407*x.X1 + 6.03*x.X2 - 1.43*x.X3 + 0.0757*x.X4 - 2.37*x.X5 - 1.83*x.X6 + 0.285*x.X7 - 1.72*x.X8 - 0.521*x.X9;
+    const P = Math.exp(T) / (1 + Math.exp(T));
+
+    // 3. Altman Logic
+    const a = {
+        A1: wc / ta,
+        A2: re / ta,
+        A3: ebit / ta,
+        A4: mve / tl,
+        A5: rev / ta
+    };
+    const Z = (1.2 * a.A1) + (1.4 * a.A2) + (3.3 * a.A3) + (0.6 * a.A4) + (1.0 * a.A5);
+
+    // 4. Update UI
+    document.getElementById('results').style.display = 'block';
+    
+    // Ohlson UI
+    document.getElementById('o_val').innerText = (P * 100).toFixed(2) + "%";
+    const oCard = document.getElementById('o_card');
+    if (P > threshold) { oCard.className = "score-card danger"; document.getElementById('o_status').innerText = "DISTRESS"; }
+    else { oCard.className = "score-card safe"; document.getElementById('o_status').innerText = "SAFE"; }
+
+    // Altman UI
+    document.getElementById('z_val').innerText = Z.toFixed(2);
+    const zCard = document.getElementById('z_card');
+    if (Z < 1.8) { zCard.className = "score-card danger"; document.getElementById('z_status').innerText = "DISTRESS"; }
+    else if (Z > 2.9) { zCard.className = "score-card safe"; document.getElementById('z_status').innerText = "SAFE"; }
+    else { zCard.className = "score-card"; document.getElementById('z_status').innerText = "GREY ZONE"; }
+
+    // Build Table
+    let rows = "";
+    const names = ["Size", "Leverage", "Liquidity", "Current Gap", "Neg Equity", "Profitability", "Cash Flow Index", "Loss History", "Trend"];
+    Object.keys(x).forEach((k, i) => rows += `<tr><td><b>${k}</b></td><td>Ohlson: ${names[i]}</td><td>${x[k].toFixed(4)}</td></tr>`);
+    const zNames = ["Liquidity (A1)", "Retained Earn (A2)", "EBIT Efficiency (A3)", "Solvency (A4)", "Asset Turnover (A5)"];
+    Object.keys(a).forEach((k, i) => rows += `<tr><td><b>${k}</b></td><td>Altman: ${zNames[i]}</td><td>${a[k].toFixed(4)}</td></tr>`);
+    document.getElementById('v_table').innerHTML = rows;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Altman Z-Score Professional Analyzer by Perry Gogas</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
+        .wrapper { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; margin-top: 0; font-size: 1.6rem; }
+        
+        .setup-section { background: #e8f0fe; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .field { display: flex; flex-direction: column; }
+        label { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #4a5568; }
+        input, select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; }
+        
+        .calc-btn { width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .calc-btn:hover { background: #1557b0; transform: translateY(-1px); }
+        
+        .results { margin-top: 30px; display: none; }
+        .dashboard { display: flex; justify-content: center; margin-bottom: 30px; }
+        .res-card { width: 100%; max-width: 400px; padding: 25px; border-radius: 10px; text-align: center; border: 2px solid #eee; background: #fff; }
+        .big-val { font-size: 3rem; font-weight: bold; display: block; margin: 10px 0; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 15px; background: #fff; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #edf2f7; }
+        th { background: #f7fafc; color: #4a5568; text-transform: uppercase; }
+        
+        .danger { background: #fff5f5; color: #c53030; border-color: #feb2b2; }
+        .safe { background: #f0fff4; color: #276749; border-color: #9ae6b4; }
+        .grey { background: #fffaf0; color: #9c4221; border-color: #fbd38d; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <h1>Altman Z-Score Analyzer by Perry Gogas</h1>
+    
+    <div class="setup-section">
+        <div class="field">
+            <label>Select Altman Model Variation</label>
+            <select id="altman_model" onchange="updateLabels()">
+                <option value="public">Public Manufacturing (Z-Score)</option>
+                <option value="private">Private Manufacturing (Z'-Score)</option>
+                <option value="non_mfg">Non-Manufacturing / Service (Z''-Score)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="input-grid">
+        <div class="field"><label>Total Assets ($)</label><input type="number" id="ta" value="1000000"></div>
+        <div class="field"><label>Total Liabilities ($)</label><input type="number" id="tl" value="600000"></div>
+        <div class="field"><label>Working Capital ($)</label><input type="number" id="wc" value="200000"></div>
+        <div class="field"><label>Retained Earnings ($)</label><input type="number" id="re" value="300000"></div>
+        <div class="field"><label>EBIT ($)</label><input type="number" id="ebit" value="150000"></div>
+        <div class="field"><label id="equity_label">Market Value of Equity ($)</label><input type="number" id="eq" value="1200000"></div>
+        <div class="field" id="sales_box"><label>Total Sales (Revenue) ($)</label><input type="number" id="sales" value="1800000"></div>
+    </div>
+
+    <button class="calc-btn" onclick="calculateAltman()">Calculate Altman Z-Score</button>
+
+    <div class="results" id="results_area">
+        <div class="dashboard">
+            <div id="z_card" class="res-card">
+                <strong id="model_title">Altman Z-Score</strong>
+                <span id="z_res" class="big-val">--</span>
+                <b id="z_status">--</b>
+            </div>
+        </div>
+
+        <h3>Variable Breakdown (A1 - A5)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ratio</th>
+                    <th>Description</th>
+                    <th>Calculated Value</th>
+                </tr>
+            </thead>
+            <tbody id="v_body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function updateLabels() {
+    const model = document.getElementById('altman_model').value;
+    const equityLabel = document.getElementById('equity_label');
+    const salesBox = document.getElementById('sales_box');
+
+    // Update Label based on Public vs Private
+    equityLabel.innerText = (model === 'public') ? "Market Value of Equity ($)" : "Book Value of Equity ($)";
+    
+    // Z'' (Non-Mfg) model ignores Sales/Total Assets
+    salesBox.style.opacity = (model === 'non_mfg') ? "0.4" : "1.0";
+}
+
+function calculateAltman() {
+    const ta = parseFloat(document.getElementById('ta').value) || 1;
+    const tl = parseFloat(document.getElementById('tl').value) || 1;
+    const wc = parseFloat(document.getElementById('wc').value) || 0;
+    const re = parseFloat(document.getElementById('re').value) || 0;
+    const ebit = parseFloat(document.getElementById('ebit').value) || 0;
+    const eq = parseFloat(document.getElementById('eq').value) || 0;
+    const sales = parseFloat(document.getElementById('sales').value) || 0;
+    const model = document.getElementById('altman_model').value;
+
+    const A1 = wc / ta;
+    const A2 = re / ta;
+    const A3 = ebit / ta;
+    const A4 = eq / tl;
+    const A5 = sales / ta;
+
+    let Z = 0;
+    let status = "";
+    let css = "";
+    let modelName = "";
+
+    if (model === 'public') {
+        // Original Z-Score (1968)
+        Z = (1.2 * A1) + (1.4 * A2) + (3.3 * A3) + (0.6 * A4) + (1.0 * A5);
+        modelName = "Public Manufacturing (Z)";
+        if (Z > 2.99) { status = "SAFE ZONE"; css = "safe"; }
+        else if (Z < 1.81) { status = "DISTRESS ZONE"; css = "danger"; }
+        else { status = "GREY ZONE"; css = "grey"; }
+    } else if (model === 'private') {
+        // Z'-Score (1983)
+        Z = (0.717 * A1) + (0.847 * A2) + (3.107 * A3) + (0.420 * A4) + (0.998 * A5);
+        modelName = "Private Manufacturing (Z')";
+        if (Z > 2.90) { status = "SAFE ZONE"; css = "safe"; }
+        else if (Z < 1.23) { status = "DISTRESS ZONE"; css = "danger"; }
+        else { status = "GREY ZONE"; css = "grey"; }
+    } else {
+        // Z''-Score (Non-Manufacturing)
+        Z = (6.56 * A1) + (3.26 * A2) + (6.72 * A3) + (1.05 * A4);
+        modelName = "Non-Manufacturing (Z'')";
+        if (Z > 2.60) { status = "SAFE ZONE"; css = "safe"; }
+        else if (Z < 1.10) { status = "DISTRESS ZONE"; css = "danger"; }
+        else { status = "GREY ZONE"; css = "grey"; }
+    }
+
+    // Update UI
+    document.getElementById('results_area').style.display = 'block';
+    document.getElementById('z_res').innerText = Z.toFixed(2);
+    document.getElementById('model_title').innerText = modelName;
+    document.getElementById('z_status').innerText = status;
+    document.getElementById('z_card').className = "res-card " + css;
+
+    // Build Variable Table
+    const labels = ["Working Capital / Total Assets", "Retained Earnings / Total Assets", "EBIT / Total Assets", "Equity / Total Liabilities", "Sales / Total Assets"];
+    const values = [A1, A2, A3, A4, A5];
+    let rows = "";
+    for (let i = 0; i < 5; i++) {
+        if (model === 'non_mfg' && i === 4) continue; // Skip A5 for Non-Mfg
+        rows += `<tr><td><b>A${i+1}</b></td><td>${labels[i]}</td><td>${values[i].toFixed(4)}</td></tr>`;
+    }
+    document.getElementById('v_body').innerHTML = rows;
+}
+</script>
+
+</body>
+</html>

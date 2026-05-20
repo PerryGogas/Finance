@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Futures Pricing Calculator (Cost of Carry)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
+        .wrapper { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px; margin-top: 0; font-size: 1.6rem; }
+        
+        .formula-display { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-style: italic; color: #555; border: 1px solid #ddd; }
+        .input-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 25px; }
+        .field { display: flex; flex-direction: column; }
+        label { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #4a5568; }
+        input { padding: 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.95rem; }
+        
+        .calc-btn { width: 100%; padding: 18px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .calc-btn:hover { background: #0056b3; transform: translateY(-1px); }
+        
+        .results { margin-top: 30px; display: none; background: #eef9f1; padding: 25px; border-radius: 10px; text-align: center; border: 2px solid #c3e6cb; }
+        .res-label { font-size: 1rem; color: #155724; font-weight: bold; }
+        .big-val { font-size: 2.5rem; font-weight: bold; display: block; margin: 10px 0; color: #155724; }
+        .note { font-size: 0.75rem; color: #666; margin-top: 10px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <h1>Futures Pricing Calculator <br> by Perry Gogas</h1>
+    
+    <div class="formula-display">
+        F<sub>t, t+n</sub> = S<sub>t</sub> * e<sup>(r + c - y)n</sup>
+    </div>
+
+    <div class="input-grid">
+        <div class="field">
+            <label>Spot Price (S<sub>t</sub>)</label>
+            <input type="number" id="spot" value="100" step="0.01">
+        </div>
+        <div class="field">
+            <label>Risk-Free Interest Rate (r) - e.g., 0.05 for 5%</label>
+            <input type="number" id="rate" value="0.05" step="0.001">
+        </div>
+        <div class="field">
+            <label>Cost of Carry (c) - Storage/Insurance</label>
+            <input type="number" id="carry" value="0.02" step="0.001">
+        </div>
+        <div class="field">
+            <label>Convenience Yield (y)</label>
+            <input type="number" id="yield" value="0.01" step="0.001">
+        </div>
+        <div class="field">
+            <label>Time to Delivery in Years (n)</label>
+            <input type="number" id="time" value="0.5" step="0.01">
+        </div>
+    </div>
+
+    <button class="calc-btn" onclick="calculateFuture()">Calculate Forward Price</button>
+
+    <div class="results" id="output">
+        <span class="res-label">Estimated Forward Price (F)</span>
+        <span id="f_res" class="big-val">--</span>
+        <p class="note">
+            This represents the theoretical fair price. If the market price is higher, it suggests a "Contango" environment; if lower, "Backwardation."
+        </p>
+    </div>
+</div>
+
+<script>
+function calculateFuture() {
+    // 1. Capture Inputs
+    const S = parseFloat(document.getElementById('spot').value) || 0;
+    const r = parseFloat(document.getElementById('rate').value) || 0;
+    const c = parseFloat(document.getElementById('carry').value) || 0;
+    const y = parseFloat(document.getElementById('yield').value) || 0;
+    const n = parseFloat(document.getElementById('time').value) || 0;
+
+    // 2. Continuous Compounding Formula: F = S * e^((r + c - y) * n)
+    const exponent = (r + c - y) * n;
+    const F = S * Math.exp(exponent);
+
+    // 3. Display Results
+    document.getElementById('output').style.display = 'block';
+    document.getElementById('f_res').innerText = "$" + F.toFixed(4);
+}
+</script>
+
+</body>
+</html>
