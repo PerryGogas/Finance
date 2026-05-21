@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Διαδραστικός Προσομοιωτής Δανείου & Πληθωρισμού</title>
+    <style>
+        :root {
+            --primary: #0f172a;       /* Slate 900 */
+            --accent: #3b82f6;        /* Blue 500 */
+            --background: #f8fafc;    /* Slate 50 */
+            --card: #ffffff;          /* Pure White */
+            --text: #1e293b;          /* Slate 800 */
+            --border: #e2e8f0;        /* Slate 200 */
+            
+            /* Χρώματα για τα αποτελέσματα */
+            --metric-blue: #2563eb;
+            --metric-green: #16a34a;
+            --metric-orange: #ea580c;
+            --metric-purple: #9333ea;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-bottom: 4px solid var(--accent);
+        }
+
+        header h1 { margin: 0; font-size: 2rem; font-weight: 800; }
+        header .sub-header { margin: 6px 0 4px; opacity: 0.9; font-size: 1.1rem; }
+        header .dept { opacity: 0.7; font-size: 0.9rem; font-style: italic; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+
+        .slider-wrap {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .slider-desc {
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.3;
+            margin-top: 4px;
+        }
+
+        /* Metrics HUD Layout */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .metric-name {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        /* Custom Borders για κάθε δείκτη */
+        .m-nominal-payment { border-top: 4px solid var(--metric-blue); }
+        .m-nominal-payment .metric-value { color: var(--metric-blue); }
+        
+        .m-total-interest { border-top: 4px solid var(--metric-orange); }
+        .m-total-interest .metric-value { color: var(--metric-orange); }
+        
+        .m-real-payment { border-top: 4px solid var(--metric-green); }
+        .m-real-payment .metric-value { color: var(--metric-green); }
+        
+        .m-real-interest { border-top: 4px solid var(--metric-purple); }
+        .m-real-interest .metric-value { color: var(--metric-purple); }
+
+        .status-box {
+            background: #eff6ff;
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            border-top: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Πίνακας Αποπληρωμής */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Προσομοιωτής Δανείου & Πραγματικής Αξίας Χρήματος</h1>
+        <div class="sub-header">Εργαστήριο Μακροοικονομικής & Χρηματοοικονομικής Ανάλυσης</div>
+        <div class="dept">Τμήμα Οικονομικών Επιστημών - Δημοκρίτειο Πανεπιστήμιο Θράκης</div>
+    </header>
+
+    <div class="layout">
+        <div class="card controls">
+            <div class="control-group">
+                <label for="loanAmount">1. Κεφάλαιο Δανείου (€)</label>
+                <div class="slider-wrap">
+                    <div class="slider-header"><span>Ποσό (Principal)</span><span id="loanAmountVal" style="color:var(--accent); font-weight:800;">100.000 €</span></div>
+                    <input type="range" id="loanAmount" min="10000" max="500000" value="100000" step="5000">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="loanYears">2. Διάρκεια Αποπληρωμής (Έτη)</label>
+                <div class="slider-wrap">
+                    <div class="slider-header"><span>Χρόνια (Time)</span><span id="loanYearsVal" style="color:var(--accent); font-weight:800;">15 έτη</span></div>
+                    <input type="range" id="loanYears" min="1" max="30" value="15" step="1">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="interestRate">3. Ονομαστικό Επιτόκιο (%)</label>
+                <div class="slider-wrap">
+                    <div class="slider-header"><span>Ετήσιο Επιτόκιο</span><span id="interestRateVal" style="color:var(--accent); font-weight:800;">4.0%</span></div>
+                    <input type="range" id="interestRate" min="0" max="15" value="4.0" step="0.1">
+                    <div class="slider-desc">Το σταθερό ετήσιο ονομαστικό επιτόκιο της τράπεζας.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="inflationRate">4. Αναμενόμενος Πληθωρισμός (%)</label>
+                <div class="slider-wrap">
+                    <div class="slider-header"><span>Ετήσιος Πληθωρισμός</span><span id="inflationRateVal" style="color:var(--accent); font-weight:800;">3.0%</span></div>
+                    <input type="range" id="inflationRate" min="-2" max="10" value="3.0" step="0.1">
+                    <div class="slider-desc">Ο μέσος ετήσιος ρυθμός πληθωρισμού. Οι αρνητικές τιμές προσομοιώνουν αποπληθωρισμό.</div>
+                </div>
+            </div>
+            
+            <div class="status-box">
+                <strong>🔬 Οικονομική Παρατήρηση:</strong> 
+                Όταν ο πληθωρισμός είναι θετικός, η <strong>Πραγματική Αξία</strong> της δόσης μειώνεται κάθε χρόνο. Αυτό σημαίνει ότι ο δανειολήπτης «ευνοείται» καθώς αποπληρώνει το δάνειο με χρήματα μικρότερης αγοραστικής δύναμης!
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <div class="metrics-grid">
+                <div class="metric-card m-nominal-payment">
+                    <div class="metric-name">Ονομαστική Μηνιαία Δόση</div>
+                    <div class="metric-value" id="nominalMonthlyPayment">0,00 €</div>
+                </div>
+                <div class="metric-card m-total-interest">
+                    <div class="metric-name">Σύνολο Ονοματικών Τόκων</div>
+                    <div class="metric-value" id="totalNominalInterest">0,00 €</div>
+                </div>
+                <div class="metric-card m-real-payment">
+                    <div class="metric-name">Μέση Πραγματική Δόση</div>
+                    <div class="metric-value" id="avgRealPayment">0,00 €</div>
+                </div>
+                <div class="metric-card m-real-interest">
+                    <div class="metric-name">Παρούσα Αξία Τόκων</div>
+                    <div class="metric-value" id="pvTotalInterest">0,00 €</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <label>Διαχρονική Πορεία & Διάβρωση Αγοραστικής Δύναμης</label>
+                <div class="table-container">
+                    <table id="amortizationTable">
+                        <thead>
+                            <tr>
+                                <th class="text-left">Έτος</th>
+                                <th>Ονομαστική Δόση (Έτους)</th>
+                                <th>Αγοραστική Δύναμη Δόσης (Τέλος Έτους)</th>
+                                <th>Ονομαστικοί Τόκοι (Έτους)</th>
+                                <th>Παρούσα Αξία Τόκων (Έτους)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Σύνδεσμοι με το DOM των χειριστηρίων
+    const loanAmountSlider = document.getElementById('loanAmount');
+    const loanYearsSlider = document.getElementById('loanYears');
+    const interestRateSlider = document.getElementById('interestRate');
+    const inflationRateSlider = document.getElementById('inflationRate');
+
+    const loanAmountVal = document.getElementById('loanAmountVal');
+    const loanYearsVal = document.getElementById('loanYearsVal');
+    const interestRateVal = document.getElementById('interestRateVal');
+    const inflationRateVal = document.getElementById('inflationRateVal');
+
+    // Σύνδεσμοι με το DOM των αποτελεσμάτων
+    const nominalMonthlyPaymentEl = document.getElementById('nominalMonthlyPayment');
+    const totalNominalInterestEl = document.getElementById('totalNominalInterest');
+    const avgRealPaymentEl = document.getElementById('avgRealPayment');
+    const pvTotalInterestEl = document.getElementById('pvTotalInterest');
+    const amortizationTableBody = document.getElementById('amortizationTable').getElementsByTagName('tbody')[0];
+
+    // Συνάρτηση μορφοποίησης νομίσματος σε ευρώ
+    function formatEuro(val) {
+        return new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(val);
+    }
+
+    // --- ΚΥΡΙΑ ΜΗΧΑΝΗ ΥΠΟΛΟΓΙΣΜΩΝ & ΑΝΑΛΥΣΗΣ ΔΑΝΕΙΟΥ ---
+    function calculateLoanSimulation() {
+        const principal = parseFloat(loanAmountSlider.value);
+        const years = parseInt(loanYearsSlider.value);
+        const nominalAnnualRate = parseFloat(interestRateSlider.value) / 100;
+        const annualInflationRate = parseFloat(inflationRateSlider.value) / 100;
+
+        // Ενημέρωση των κειμένων των sliders
+        loanAmountVal.innerText = principal.toLocaleString('el-GR') + " €";
+        loanYearsVal.innerText = years + " έτη";
+        interestRateVal.innerText = (nominalAnnualRate * 100).toFixed(1) + "%";
+        inflationRateVal.innerText = (annualInflationRate * 100).toFixed(1) + "%";
+
+        const totalMonths = years * 12;
+        const monthlyRate = nominalAnnualRate / 12;
+
+        // 1. Υπολογισμός Ονομαστικής Μηνιαίας Δόσης (Γαλλικό Σύστημα - Ισόποσες Δόσεις)
+        let nominalMonthlyPayment = 0;
+        if (monthlyRate === 0) {
+            nominalMonthlyPayment = principal / totalMonths;
+        } else {
+            nominalMonthlyPayment = (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalMonths));
+        }
+
+        // 2. Δημιουργία πίνακα αποπληρωμής μήνα-μήνα για ακρίβεια και προετοιμασία ετήσιων δεδομένων
+        let currentBalance = principal;
+        let totalNominalInterest = 0;
+        let totalPVInterest = 0;
+        let totalRealPaymentSum = 0;
+
+        // Δομές για τη συγκέντρωση των δεδομένων ανά έτος
+        let yearlyData = [];
+
+        for (let year = 1; year <= years; year++) {
+            let yearlyNominalInterest = 0;
+            let yearlyNominalPayment = 0;
+
+            // Υπολογισμός των 12 μηνών του τρέχοντος έτους
+            for (let month = 1; month <= 12; month++) {
+                let currentTotalMonth = ((year - 1) * 12) + month;
+                
+                // Υπολογισμός τόκου και κεφαλαίου για τον τρέχοντα μήνα
+                let interestForMonth = currentBalance * monthlyRate;
+                let principalForMonth = nominalMonthlyPayment - interestForMonth;
+                
+                currentBalance -= principalForMonth;
+                yearlyNominalInterest += interestForMonth;
+                yearlyNominalPayment += nominalMonthlyPayment;
+
+                // Διαχρονικός αποπληθωρισμός της δόσης βάσει μηνιαίου πληθωρισμού (για ακρίβεια)
+                // Τύπος: Real Value = Nominal / (1 + inflation)^(t/12)
+                let realPaymentForMonth = nominalMonthlyPayment / Math.pow(1 + annualInflationRate, currentTotalMonth / 12);
+                totalRealPaymentSum += realPaymentForMonth;
+
+                // Παρούσα Αξία του τόκου του συγκεκριμένου μήνα
+                let pvInterestForMonth = interestForMonth / Math.pow(1 + annualInflationRate, currentTotalMonth / 12);
+                totalPVInterest += pvInterestForMonth;
+            }
+
+            totalNominalInterest += yearlyNominalInterest;
+
+            // Υπολογισμός αγοραστικής δύναμης της δόσης στο τέλος του συγκεκριμένου έτους
+            let realPaymentValueAtYearEnd = nominalMonthlyPayment / Math.pow(1 + annualInflationRate, year);
+            
+            // Παρούσα Αξία των τόκων ολόκληρου του έτους
+            let pvInterestForYear = yearlyNominalInterest / Math.pow(1 + annualInflationRate, year);
+
+            yearlyData.push({
+                year: year,
+                nominalPayment: yearlyNominalPayment / 12, // Μηνιαίο ισοδύναμο ονομαστικό
+                realPayment: realPaymentValueAtYearEnd,
+                nominalInterest: yearlyNominalInterest,
+                pvInterest: pvInterestForYear
+            });
+        }
+
+        // 3. Ενημέρωση των Καρτών HUD
+        nominalMonthlyPaymentEl.innerText = formatEuro(nominalMonthlyPayment);
+        totalNominalInterestEl.innerText = formatEuro(totalNominalInterest);
+        avgRealPaymentEl.innerText = formatEuro(totalRealPaymentSum / totalMonths);
+        pvTotalInterestEl.innerText = formatEuro(totalPVInterest);
+
+        // 4. Ανακατασκευή του Πίνακα της Διαχρονικής Πορείας
+        amortizationTableBody.innerHTML = "";
+        yearlyData.forEach(row => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-left" style="font-weight:bold; color:var(--primary);">Έτος ${row.year}</td>
+                <td>${formatEuro(row.nominalPayment)}</td>
+                <td style="color: var(--metric-green); font-weight:600;">${formatEuro(row.realPayment)}</td>
+                <td>${formatEuro(row.nominalInterest)}</td>
+                <td style="color: var(--metric-purple); font-weight:600;">${formatEuro(row.pvInterest)}</td>
+            `;
+            amortizationTableBody.appendChild(tr);
+        });
+    }
+
+    // Προσθήκη Event Listeners για αυτόματη ανανέωση κατά τη μετακίνηση των Sliders
+    [loanAmountSlider, loanYearsSlider, interestRateSlider, inflationRateSlider].forEach(slider => {
+        slider.addEventListener('input', calculateLoanSimulation);
+    });
+
+    // Εκκίνηση των υπολογισμών κατά το άνοιγμα της σελίδας
+    setTimeout(calculateLoanSimulation, 100);
+</script>
+
+</body>
+</html>
