@@ -61,8 +61,44 @@
     <div class="card">
         <h2>Upload Revolut Account Statement File</h2>
         <p style="font-size: 14px; color: #48525d; line-height: 1.5;">
-            Select your exported <strong>trading-account-statement_2025-05-01_2026-05-28_en-us_cb3193.xlsx</strong> file. This version uses explicit exact-string matching to map your specific ledger format.
+            Select your exported trading-account-statement file.
         </p>
+
+<!-- START OF REVOLUT EXPORT GUIDE SECTION -->
+<div class="card" style="margin-top: 30px; line-height: 1.6;">
+    <h2 style="color: #191c1f; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        How to Export Your Statement from Revolut
+    </h2>
+    <p style="font-size: 14px; color: #48525d; margin-bottom: 20px;">
+        To calculate your exact annualized performance, you need to extract your transaction history from the Revolut mobile application as a spreadsheet. Follow these quick steps:
+    </p>
+    
+    <ol style="padding-left: 20px; margin: 0; font-size: 14.5px; color: #111214;">
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Open the App:</strong> Launch the Revolut application on your mobile device.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Navigate to Invest:</strong> Tap on the <strong>Invest</strong> tab located in the bottom navigation dock.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Open Documents Portal:</strong> Tap the <strong>More (...)</strong> context menu on your dashboard, then select <strong>Documents</strong>.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Select Trading Ledger:</strong> Choose <strong>Stocks</strong> from the list, and select <strong>Account Statement</strong>.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Set Format to Excel:</strong> Toggle the export file type from PDF to <strong>Excel (.xlsx)</strong>. This provides the raw structured data matrix required for the parser.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Define the Date Horizon:</strong> Select the maximum available date range (from your very first funding deposit down to today) to capture your entire time-weighted investment timeline.
+        </li>
+        <li style="margin-bottom: 12px; padding-left: 5px;">
+            <strong>Generate and Save:</strong> Tap <strong>Get Statement</strong>. Export the file to your desktop storage or cloud drives (e.g., OneDrive, iCloud, Google Drive) and upload it directly into the calculator above.
+        </li>
+    </ol>
+</div>
+<!-- END OF REVOLUT EXPORT GUIDE SECTION -->
         <div class="file-input-container" onclick="document.getElementById('fileInput').click()">
             <span id="file-label">Click to select your Revolut Excel file (.xlsx)</span>
             <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
